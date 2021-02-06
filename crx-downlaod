@@ -4,6 +4,8 @@
 # https://ungoogled-software.github.io/ungoogled-chromium-wiki/faq
 
 set -e
+LC_ALL=C
+export LC_ALL
 
 echo() {
   printf '%s\n' "$*"
@@ -11,38 +13,36 @@ echo() {
 help() {
   echo 'Usage:'
   echo '    crx-download [url] [output_file] [browser_version]'
-  echo
-  echo 'Downloading requires the program: curl, wget or aria2c.'
 }
 
 #FAKE_USER_AGENT=''
 
 BROWSER_VER_MIN='31.0.1609.0'
 
-REF_URL="https://chrome.google.com/webstore/"
-APP_URL="https://chrome.google.com/webstore/detail/"
-CRX_URL="https://clients2.google.com/service/update2/crx"
+REF_URL='https://chrome.google.com/webstore/'
+APP_URL='https://chrome.google.com/webstore/detail/'
+CRX_URL='https://clients2.google.com/service/update2/crx'
 
 if [ "$#" -eq 0 ]; then
   help
   exit 0
 fi
 
+exec >&2
+
 # remove prefix (path) ".../webstore/detail/"
-APP_ID="${1#${APP_URL}}"
+APP_ID="${1#"${APP_URL}"}"
 # remove suffix (query, hash) "?a=x&b=y&...", "#..."
 APP_ID="${APP_ID%%[?#]*}"
 # remove suffix (trailing slashes "/" and junk)
-while case "${APP_ID}" in (*[!a-z]) true;; (*) false; esac; do
-  APP_ID="${APP_ID%[!a-z]}"
-done
+APP_ID="${APP_ID%"${APP_ID##*[a-z]}"}"
 # remove prefix (optional slug and junk) "ublock-origin/"
 APP_ID="${APP_ID##*[!a-z]}"
 # remove suffix (junk)
 APP_ID="${APP_ID%%[!a-z]*}"
 # final check
 case "${APP_ID}" in ('' | *[!a-z]*)
-  echo "[ERROR] invalid extention ID \"${APP_ID}\"" >&2
+  echo "[ERROR] invalid extention ID \"${APP_ID}\""
   exit 1
 esac
 
@@ -59,11 +59,11 @@ DOWNLOAD_URL="${CRX_URL}?response=redirect&acceptformat=crx,crx2,crx3&prodversio
 
 unalias -a
 have() {
-  type "$@" > /dev/null 2>&1
+  type "$1" >/dev/null 2>&1
 }
 
-echo "Downloading \"${OUT_FILE}\" from ${DOWNLOAD_URL} ..." >&2
-echo >&2
+echo "Downloading \"${OUT_FILE}\" from ${DOWNLOAD_URL} ..."
+echo
 if have curl; then
   exec curl -L --max-redirs 5 \
             --user-agent "${USER_AGENT}" \
@@ -80,6 +80,6 @@ elif have aria2c; then
               --referer="${REFERRER}" \
               "${DOWNLOAD_URL}" -o "${OUT_FILE}"
 else
-  echo '[ERROR] downloader not found!' >&2
+  echo '[ERROR] downloader not found!'
   exit 1
 fi
